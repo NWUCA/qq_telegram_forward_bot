@@ -30,6 +30,7 @@ q = Queue()
 
 def worker():
     task: Task = q.get()
+    logger.info(f"Getting task: {task}")
     task.func(*task.args, **task.kwargs)
 
 
@@ -119,6 +120,7 @@ def forward_to_tg(data):
     if resolved_json_msg := process_qq_json_message(data['message']):
         data['message'] = resolved_json_msg
     msg = f"{msg_prefix} {data['message']}"
+    logger.info(f"Invoking tg api, sending to {forward.tg}, msg is: {msg}")
     tg_message = telegram_bot.send_message(forward.tg, msg)
     message.message_id_tg = tg_message.id
     message.save()
@@ -169,6 +171,7 @@ def forward_to_qq(data):
     )
 
     payload: dict[str, Union[int, str]] = {"message": tg_message.text, 'group_id': forward.qq}
+    logger.info(f"Invoking coolq api, payload is {payload}")
     r = requests.post(settings['COOLQ_API_ADDRESS'].format('send_msg'), json=payload)
 
     message.message_id_qq = r.json()['message_id']
