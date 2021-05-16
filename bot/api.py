@@ -29,9 +29,15 @@ q = Queue()
 
 
 def worker():
-    task: Task = q.get()
-    logger.info(f"Getting task: {task}")
-    task.func(*task.args, **task.kwargs)
+    while True:
+        task: Task = q.get()
+        logger.info(f"Getting task: {task}")
+        try:
+            task.func(*task.args, **task.kwargs)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            logger.critical(e)
 
 
 t = Thread(target=worker)
@@ -172,7 +178,8 @@ def forward_to_qq(data):
 
     payload: dict[str, Union[int, str]] = {"message": tg_message.text, 'group_id': forward.qq}
     logger.info(f"Invoking coolq api, payload is {payload}")
-    r = requests.post(settings['COOLQ_API_ADDRESS'].format('send_msg'), json=payload)
+    r = requests.post(settings.COOLQ_API_ADDRESS.format('send_msg'), json=payload)
+    logger.info(f"coolq api result: {r.json()}")
 
     message.message_id_qq = r.json()['message_id']
     message.save()
