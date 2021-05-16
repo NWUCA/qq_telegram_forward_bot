@@ -180,21 +180,21 @@ def forward_to_qq(data):
         card = GroupCard.objects.get(user=user, group=forward.qq)
         msg_prefix = f"[{card.card}({user.qq_nickname})]:"
     except GroupCard.DoesNotExist:
-        msg_prefix = f"[{user.telegram_name}({user.telegram_username})]:"
+        msg_prefix = f"[{user.telegram_name}(@{user.telegram_username})]:"
 
     msg = f"{msg_prefix} "
     if tg_message.content_type == 'text':
         msg += tg_message.text
     elif tg_message.content_type in ('sticker', 'photo'):
         if tg_message.sticker:
-            arr = [tg_message.sticker]
+            arr = [tg_message.sticker.thumb]
         else:
             arr = tg_message.photo
         cq_code_msg = ""
         for file in arr:
             tg_file = telegram_bot.get_file(file.file_id)
             path = f"https://api.telegram.org/file/bot{settings.TELEGRAM_API_TOKEN}/{tg_file.file_path}"
-            cq_code_msg += f"[CQ:image,file={path}"
+            cq_code_msg += f"[CQ:image,url={path}"
         msg += cq_code_msg
         if tg_message.caption:
             msg += tg_message.caption
