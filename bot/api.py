@@ -194,7 +194,9 @@ def forward_to_qq(data):
     )
 
     if tg_message.reply_to_message:
-        reply_message = Message.objects.get(tg_message.reply_to_message.message_id)
+        reply_message = Message.objects.get(
+            message_id_tg=tg_message.reply_to_message.message_id
+        )
         msg = f"[CQ:reply,id={reply_message.message_id_qq}]"
     else:
         msg = ''
