@@ -175,11 +175,17 @@ def forward_to_qq(data):
         qq_group_id=forward.qq,
         user=user
     )
-
-    payload: dict[str, Union[int, str]] = {"message": tg_message.text, 'group_id': forward.qq}
+    # TODO: 发图
+    try:
+        card = GroupCard.objects.get(user=user, group=forward.qq)
+        msg_prefix = f"[{card.card}({user.qq_nickname})]:"
+    except GroupCard.DoesNotExist:
+        msg_prefix = f"[{user.telegram_name}({user.telegram_username})]:"
+    msg = f"{msg_prefix} {tg_message.text}"
+    payload: dict[str, Union[int, str]] = {"message": msg, 'group_id': forward.qq}
     logger.info(f"Invoking coolq api, payload is {payload}")
     r = requests.post(settings.COOLQ_API_ADDRESS.format('send_msg'), json=payload)
     logger.info(f"coolq api result: {r.json()}")
 
-    message.message_id_qq = r.json()['message_id']
+    message.message_id_qq = r.json()['data']['message_id']
     message.save()
