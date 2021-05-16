@@ -18,6 +18,7 @@ class GroupCard(models.Model):
 class Message(models.Model):
     """表示一条消息, 不存储具体内容, 用于回复, 撤回等功能"""
 
+    # FIXME: id 是否可能重复?
     message_id_qq = models.BigIntegerField(null=True)
     message_id_tg = models.TextField(null=True)
     qq_group_id = models.BigIntegerField(help_text='QQ 群号')

@@ -82,6 +82,17 @@ def process_qq_image(message: str):
     return image_urls, text
 
 
+def process_qq_reply(message: str):
+    reply_re = re.compile(r"\[CQ:reply,id=(.*?)]")
+    message_id = re.search(reply_re, message)
+    text = re.sub(reply_re, lambda a: " ", message)
+    try:
+        message = Message.objects.get(message_id_qq=message_id)
+    except Message.DoesNotExist:
+        message = None
+    return message, text
+
+
 @concurrent
 def forward_to_tg(data):
     if data['post_type'] != 'message':
@@ -111,12 +122,20 @@ def forward_to_tg(data):
 
     msg_prefix = f"[{card.card}({user.qq_nickname})]:"
 
+    reply_message, text = process_qq_reply(data['message'])
+    if reply_message:
+        reply_to_message_id = reply_message.message_id_tg
+    else:
+        reply_to_message_id = None
+
     image_urls, text = process_qq_image(data['message'])
     if image_urls:
         medias = [InputMediaPhoto(url) for url in image_urls]
         msg = f"{msg_prefix} {text}"
         medias[0].caption = msg  # 插入消息内容
-        tg_message = telegram_bot.send_media_group(forward.tg, medias)
+        tg_message = telegram_bot.send_media_group(
+            forward.tg, medias, reply_to_message_id=reply_to_message_id
+        )
         message.message_id_tg = tg_message[0].id
         message.save()
         return
@@ -125,7 +144,9 @@ def forward_to_tg(data):
         data['message'] = resolved_json_msg
     msg = f"{msg_prefix} {data['message']}"
     logger.info(f"Invoking tg api, sending to {forward.tg}, msg is: {msg}")
-    tg_message = telegram_bot.send_message(forward.tg, msg)
+    tg_message = telegram_bot.send_message(
+        forward.tg, msg, reply_to_message_id=reply_to_message_id
+    )
     message.message_id_tg = tg_message.id
     message.save()
 
@@ -171,14 +192,20 @@ def forward_to_qq(data):
     message = Message.objects.create(
         message_id_tg=tg_message.id, qq_group_id=forward.qq, user=user
     )
-    # TODO: 发图
+
+    if tg_message.reply_to_message:
+        reply_message = Message.objects.get(tg_message.reply_to_message.message_id)
+        msg = f"[CQ:reply,id={reply_message.message_id_qq}]"
+    else:
+        msg = ''
+
     try:
         card = GroupCard.objects.get(user=user, group=forward.qq)
         msg_prefix = f"[{card.card}({user.qq_nickname})]:"
     except GroupCard.DoesNotExist:
         msg_prefix = f"[{user.telegram_name}(@{user.telegram_username})]:"
 
-    msg = f"{msg_prefix} "
+    msg += f"{msg_prefix} "
     if tg_message.content_type == 'text':
         msg += tg_message.text
     elif tg_message.content_type in ('sticker', 'photo'):
@@ -190,12 +217,13 @@ def forward_to_qq(data):
         for file in arr:
             tg_file = telegram_bot.get_file(file.file_id)
             path = f"https://api.telegram.org/file/bot{settings.TELEGRAM_API_TOKEN}/{tg_file.file_path}"
-            cq_code_msg += f"[CQ:image,url={path}]"
+            cq_code_msg += f"[CQ:image,file={path}]"
         msg += cq_code_msg
         if tg_message.caption:
             msg += tg_message.caption
     else:
         msg += f"不支持的消息类型, content_type: {tg_message.content_type}"
+
     payload: dict[str, Union[int, str]] = {"message": msg, 'group_id': forward.qq}
     logger.info(f"Invoking coolq api, payload is {payload}")
     r = requests.post(settings.COOLQ_API_ADDRESS.format('send_msg'), json=payload)
