@@ -2,30 +2,30 @@
 QQ 和 Telegram 相关的 API, API 需要是非阻塞的
 """
 
-from queue import Queue
-from threading import Thread
-from typing import Literal, Callable, Union
-from collections import namedtuple
 import functools
-import logging
-import re
 import html
 import json
+import logging
+import re
+from collections import namedtuple
+from queue import Queue
+from threading import Thread
+from typing import Any, Callable, Union
 
+import requests
 import telebot
+from django.conf import settings
 from telebot import types
 from telebot.types import InputMediaPhoto
-import requests
-from django.conf import settings
 
-from .models import Message, GroupCard, User
+from .models import GroupCard, Message, User
 from .utils import find_forward
 
 logger = logging.getLogger(__name__)
 
 telegram_bot = telebot.TeleBot(settings.TELEGRAM_API_TOKEN)
 Task = namedtuple('Task', 'func args kwargs')
-q = Queue()
+q: Any = Queue()
 
 
 def worker():
@@ -36,6 +36,7 @@ def worker():
             task.func(*task.args, **task.kwargs)
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             logger.critical(e)
 
@@ -63,7 +64,7 @@ def process_qq_json_message(message: str):
     if not match:
         return
 
-    data = match[1]
+    data: Any = match[1]
     data = html.unescape(data)
     data = json.loads(data)['meta']
     if data.get('detail_1'):
@@ -95,8 +96,7 @@ def forward_to_tg(data):
 
     sender = data['sender']
     user, _ = User.objects.get_or_create(
-        qq_id=data['user_id'],
-        defaults={'qq_nickname': sender.get('nickname')}
+        qq_id=data['user_id'], defaults={'qq_nickname': sender.get('nickname')}
     )
 
     card, _ = GroupCard.objects.update_or_create(
@@ -106,9 +106,7 @@ def forward_to_tg(data):
     )
 
     message = Message.objects.create(
-        message_id_qq=data['message_id'],
-        qq_group_id=data['group_id'],
-        user=user
+        message_id_qq=data['message_id'], qq_group_id=data['group_id'], user=user
     )
 
     msg_prefix = f"[{card.card}({user.qq_nickname})]:"
@@ -167,13 +165,11 @@ def forward_to_qq(data):
         defaults={
             'telegram_username': tg_user.username,
             'telegram_name': f"{tg_user.first_name} {tg_user.last_name if tg_user.last_name else ''}",
-        }
+        },
     )
 
     message = Message.objects.create(
-        message_id_tg=tg_message.id,
-        qq_group_id=forward.qq,
-        user=user
+        message_id_tg=tg_message.id, qq_group_id=forward.qq, user=user
     )
     # TODO: 发图
     try:

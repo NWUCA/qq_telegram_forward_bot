@@ -33,11 +33,14 @@ def mock_send_to_tg(requests_mock, app):
         return {"ok": True, "result": res}
 
     requests_mock.post(
-        app.config['TELEGRAM_API_ADDRESS'].format(app.config['TELEGRAM_API_TOKEN'], "sendMessage"),
-        json=callback
+        app.config['TELEGRAM_API_ADDRESS'].format(
+            app.config['TELEGRAM_API_TOKEN'], "sendMessage"
+        ),
+        json=callback,
     )
     requests_mock.get(
-        app.config['TELEGRAM_API_ADDRESS'].format(app.config['TELEGRAM_API_TOKEN'], "sendMediaGroup"),
-        json=callback
+        app.config['TELEGRAM_API_ADDRESS'].format(
+            app.config['TELEGRAM_API_TOKEN'], "sendMediaGroup"
+        ),
+        json=callback,
     )
-

@@ -1,5 +1,5 @@
-from django.apps import AppConfig
 import telebot
+from django.apps import AppConfig
 from django.conf import settings
 
 

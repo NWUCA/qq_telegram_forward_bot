@@ -11,7 +11,7 @@ def data_generator(
     card: str = 'test_card',
     nickname: str = 'test_nickname',
     message_type: str = 'group',
-    auto_prefix_slash: bool = True
+    auto_prefix_slash: bool = True,
 ):
     if auto_prefix_slash:
         message = "/" + message
@@ -35,11 +35,11 @@ def data_generator(
             "role": role,
             "sex": "unknown",
             "title": "头衔",
-            "user_id": user_id
+            "user_id": user_id,
         },
         "sub_type": "normal",
         "time": timestamp,
-        "user_id": user_id
+        "user_id": user_id,
     }
     if message_type == 'group':
         data["group_id"] = 102334415

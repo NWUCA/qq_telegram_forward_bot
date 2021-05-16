@@ -4,7 +4,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .api import forward_to_tg, forward_to_qq
+from .api import forward_to_qq, forward_to_tg
 
 
 @api_view(['POST'])
