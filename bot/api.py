@@ -181,7 +181,25 @@ def forward_to_qq(data):
         msg_prefix = f"[{card.card}({user.qq_nickname})]:"
     except GroupCard.DoesNotExist:
         msg_prefix = f"[{user.telegram_name}({user.telegram_username})]:"
-    msg = f"{msg_prefix} {tg_message.text}"
+
+    msg = f"{msg_prefix} "
+    if tg_message.content_type == 'text':
+        msg += tg_message.text
+    elif tg_message.content_type in ('sticker', 'photo'):
+        if tg_message.sticker:
+            arr = [tg_message.sticker]
+        else:
+            arr = tg_message.photo
+        cq_code_msg = ""
+        for file in arr:
+            tg_file = telegram_bot.get_file(file.file_id)
+            path = f"https://api.telegram.org/file/bot{settings.TELEGRAM_API_TOKEN}/{tg_file.file_path}"
+            cq_code_msg += f"[CQ:image,file={path}"
+        msg += cq_code_msg
+        if tg_message.caption:
+            msg += tg_message.caption
+    else:
+        msg += f"不支持的消息类型, content_type: {tg_message.content_type}"
     payload: dict[str, Union[int, str]] = {"message": msg, 'group_id': forward.qq}
     logger.info(f"Invoking coolq api, payload is {payload}")
     r = requests.post(settings.COOLQ_API_ADDRESS.format('send_msg'), json=payload)
