@@ -1,0 +1,19 @@
+[[source]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+pytest-django = "*"
+pre-commit = "*"
+
+[packages]
+requests = "*"
+pytelegrambotapi = "*"
+django = "~=3.1"
+djangorestframework = "*"
+
+[requires]
+# 这里不能指定 Python 版本的范围, 实际要求 >= 3.8
+python_version = "3"

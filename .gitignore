@@ -1,0 +1,40 @@
+# config file
+settings.cfg
+production.py
+development.py
+
+# some test
+learn.py
+
+# database
+database.db
+
+# Editors
+.vscode
+.idea
+database.dv
+database.db-journal
+
+# Docker
+docker-compose.yml
+
+# Byte-compiled
+__pycache__/
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+test.db
+
+# Flask stuff:
+instance/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
