@@ -166,7 +166,7 @@ def forward_to_qq(data):
         telegram_id=tg_user.id,
         defaults={
             'telegram_username': tg_user.username,
-            'telegram_name': f"{tg_user.first_name} {tg_user.last_name}",
+            'telegram_name': f"{tg_user.first_name} {tg_user.last_name if tg_user.last_name else ''}",
         }
     )
 
@@ -194,7 +194,7 @@ def forward_to_qq(data):
         for file in arr:
             tg_file = telegram_bot.get_file(file.file_id)
             path = f"https://api.telegram.org/file/bot{settings.TELEGRAM_API_TOKEN}/{tg_file.file_path}"
-            cq_code_msg += f"[CQ:image,url={path}"
+            cq_code_msg += f"[CQ:image,url={path}]"
         msg += cq_code_msg
         if tg_message.caption:
             msg += tg_message.caption
