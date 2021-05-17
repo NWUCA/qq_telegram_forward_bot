@@ -31,7 +31,6 @@ q: Any = Queue()
 def worker():
     while True:
         task: Task = q.get()
-        logger.info(f"Getting task: {task}")
         try:
             task.func(*task.args, **task.kwargs)
         except Exception as e:
@@ -78,14 +77,19 @@ def process_qq_json_message(message: str):
 def process_qq_image(message: str):
     image_re = re.compile(r"\[CQ:image,file=(.*?),url=(.*?)]")
     image_urls = list(map(lambda a: a[1], re.findall(image_re, message)))
-    text = re.sub(image_re, lambda a: " ", message)
+    text = re.sub(image_re, lambda a: "", message)
     return image_urls, text
 
 
 def process_qq_reply(message: str):
     reply_re = re.compile(r"\[CQ:reply,id=(.*?)]")
-    message_id = re.search(reply_re, message)
-    text = re.sub(reply_re, lambda a: " ", message)
+
+    match = re.search(reply_re, message)
+    if not match:
+        return None, None
+
+    message_id = match[1]
+    text = re.sub(reply_re, lambda a: "", message)
     try:
         message = Message.objects.get(message_id_qq=message_id)
     except Message.DoesNotExist:
@@ -93,8 +97,13 @@ def process_qq_reply(message: str):
     return message, text
 
 
+# TODO 处理 at
 @concurrent
 def forward_to_tg(data):
+    # 处理撤回事件
+    if data['post_type'] == 'notice' and data['notice_type'] == 'group_recall':
+        ...  # TODO
+
     if data['post_type'] != 'message':
         return
 
@@ -105,8 +114,10 @@ def forward_to_tg(data):
     if not forward:
         return
 
+    logger.info(f"Forward to tg handler, data: {data}")
+
     sender = data['sender']
-    user, _ = User.objects.get_or_create(
+    user, _ = User.objects.update_or_create(
         qq_id=data['user_id'], defaults={'qq_nickname': sender.get('nickname')}
     )
 
@@ -125,6 +136,7 @@ def forward_to_tg(data):
     reply_message, text = process_qq_reply(data['message'])
     if reply_message:
         reply_to_message_id = reply_message.message_id_tg
+        data['message'] = text
     else:
         reply_to_message_id = None
 
@@ -163,6 +175,8 @@ def forward_to_qq(data):
     if not forward:
         return
 
+    logger.info(f"Forward to QQ handler, data: {data}")
+
     text = tg_message.text
     tg_user = tg_message.from_user
     if text and text.startswith('/bind'):
@@ -181,7 +195,7 @@ def forward_to_qq(data):
             pass
         return
 
-    user, _ = User.objects.get_or_create(
+    user, _ = User.objects.update_or_create(
         telegram_id=tg_user.id,
         defaults={
             'telegram_username': tg_user.username,

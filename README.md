@@ -15,7 +15,6 @@ QQ 机器人为[go-cqhttp](https://github.com/Mrs4s/go-cqhttp).
 - 音频
 - (仅 QQ) JSON 消息
 
-
 ## Deploy
 ```bash
 gunicorn -b [domain:port] "bot.server:create_app()"
