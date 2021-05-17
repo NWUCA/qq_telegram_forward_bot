@@ -10,11 +10,6 @@ from .api import forward_to_qq, forward_to_tg
 @api_view(['POST'])
 def qq_event(request):
     data = request.data
-
-    # 防止 heartbeat 事件污染日志
-    if data['post_type'] == 'meta_event':
-        return Response()
-
     forward_to_tg(data)
 
     return Response()

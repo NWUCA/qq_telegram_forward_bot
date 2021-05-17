@@ -1,7 +1,6 @@
 """
 QQ 和 Telegram 相关的 API, API 需要是非阻塞的
 """
-
 import functools
 import html
 import json
@@ -31,6 +30,8 @@ q: Any = Queue()
 def worker():
     while True:
         task: Task = q.get()
+        if q.qsize() > 0:
+            logger.info(f"The queue has approximate remaining {q.qsize()} task(s).")
         try:
             task.func(*task.args, **task.kwargs)
         except Exception as e:
@@ -113,6 +114,7 @@ def process_at(message: str, forward):
         return message
 
 
+# TODO: 无法播放动图
 @concurrent
 def forward_to_tg(data):
     logger.info(f"Forward to tg handler, data: {data}")
@@ -251,7 +253,7 @@ def forward_to_qq(data):
         if tg_message.sticker:
             arr = [tg_message.sticker.thumb]
         else:
-            arr = tg_message.photo
+            arr = tg_message.photo  # FIXME: 会发两张图
         cq_code_msg = ""
         for file in arr:
             tg_file = telegram_bot.get_file(file.file_id)
