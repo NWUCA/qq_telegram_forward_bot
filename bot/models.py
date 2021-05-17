@@ -8,6 +8,22 @@ class User(models.Model):
     telegram_username = models.TextField()
     telegram_name = models.TextField()
 
+    def qq_prefix(self, qq_group_id):
+        try:
+            card = GroupCard.objects.get(user=self, group=qq_group_id)
+            return f"[{card.card}({self.qq_nickname})]"
+        except GroupCard.DoesNotExist:
+            return None
+
+    def tg_prefix(self):
+        return f"[{self.telegram_name}(@{self.telegram_username})]:"
+
+    def qq_prefix_fallback(self, qq_group_id):
+        if p := self.qq_prefix(qq_group_id):
+            return p
+        else:
+            return self.tg_prefix()
+
 
 class GroupCard(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

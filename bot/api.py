@@ -97,12 +97,40 @@ def process_qq_reply(message: str):
     return message, text
 
 
-# TODO 处理 at
+def process_at(message: str, forward):
+    at_re = re.compile(r"\[CQ:at,qq=(.*?)]")
+
+    match = re.search(at_re, message)
+    if not match:
+        return message
+
+    at_id = match[1]
+    try:
+        at_user = User.objects.get(qq_id=at_id)
+        text = re.sub(at_re, lambda a: at_user.qq_prefix(forward.qq), message)
+        return text
+    except User.DoesNotExist:
+        return message
+
+
 @concurrent
 def forward_to_tg(data):
     # 处理撤回事件
     if data['post_type'] == 'notice' and data['notice_type'] == 'group_recall':
-        ...  # TODO
+        recalled_message = Message.objects.get(message_id_qq=data['message_id'])
+        if recalled_message.user.id == data['operator_id']:
+            msg = f"{recalled_message.user.qq_prefix(data['group_id'])}撤回了这条消息"
+        else:
+            operator = User.objects.get(qq_id=data['operator_id'])
+            msg = f"{operator.qq_prefix(data['group_id'])}撤回了这条成员消息"
+
+        forward = find_forward(data['group_id'])
+        if not forward:
+            return
+
+        telegram_bot.send_message(
+            forward.tg, msg, reply_to_message_id=recalled_message.message_id_tg
+        )
 
     if data['post_type'] != 'message':
         return
@@ -139,6 +167,8 @@ def forward_to_tg(data):
         data['message'] = text
     else:
         reply_to_message_id = None
+
+    data['message'] = process_at(data['message'], forward)
 
     image_urls, text = process_qq_image(data['message'])
     if image_urls:
@@ -215,13 +245,7 @@ def forward_to_qq(data):
     else:
         msg = ''
 
-    try:
-        card = GroupCard.objects.get(user=user, group=forward.qq)
-        msg_prefix = f"[{card.card}({user.qq_nickname})]:"
-    except GroupCard.DoesNotExist:
-        msg_prefix = f"[{user.telegram_name}(@{user.telegram_username})]:"
-
-    msg += f"{msg_prefix} "
+    msg += f"{user.qq_prefix_fallback(forward.qq)}: "
     if tg_message.content_type == 'text':
         msg += tg_message.text
     elif tg_message.content_type in ('sticker', 'photo'):
