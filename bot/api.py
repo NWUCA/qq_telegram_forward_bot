@@ -117,7 +117,6 @@ def process_at(message: str, forward):
 # TODO: 无法播放动图
 @concurrent
 def forward_to_tg(data):
-    logger.info(f"Forward to tg handler, data: {data}")
     # 处理撤回事件
     if data['post_type'] == 'notice' and data['notice_type'] == 'group_recall':
         recalled_message = Message.objects.get(message_id_qq=data['message_id'])
@@ -205,8 +204,6 @@ def forward_to_qq(data):
     forward = find_forward(tg_message.chat.id)
     if not forward:
         return
-
-    logger.info(f"Forward to QQ handler, data: {data}")
 
     text = tg_message.text
     tg_user = tg_message.from_user
