@@ -107,7 +107,7 @@ def process_at(message: str, forward):
     at_id = match[1]
     try:
         at_user = User.objects.get(qq_id=at_id)
-        text = re.sub(at_re, lambda a: at_user.qq_prefix(forward.qq), message)
+        text = re.sub(at_re, lambda a: f"@{at_user.qq_prefix(forward.qq)}", message)
         return text
     except User.DoesNotExist:
         return message
@@ -115,10 +115,11 @@ def process_at(message: str, forward):
 
 @concurrent
 def forward_to_tg(data):
+    logger.info(f"Forward to tg handler, data: {data}")
     # 处理撤回事件
     if data['post_type'] == 'notice' and data['notice_type'] == 'group_recall':
         recalled_message = Message.objects.get(message_id_qq=data['message_id'])
-        if recalled_message.user.id == data['operator_id']:
+        if recalled_message.user.qq_id == data['operator_id']:
             msg = f"{recalled_message.user.qq_prefix(data['group_id'])}撤回了这条消息"
         else:
             operator = User.objects.get(qq_id=data['operator_id'])
@@ -141,8 +142,6 @@ def forward_to_tg(data):
     forward = find_forward(data['group_id'])
     if not forward:
         return
-
-    logger.info(f"Forward to tg handler, data: {data}")
 
     sender = data['sender']
     user, _ = User.objects.update_or_create(
