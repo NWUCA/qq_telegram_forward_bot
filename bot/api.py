@@ -31,7 +31,7 @@ def worker():
     while True:
         task: Task = q.get()
         if q.qsize() > 0:
-            logger.info(f"The queue has approximate remaining {q.qsize()} task(s).")
+            logger.warning(f"The queue has approximate remaining {q.qsize()} task(s).")
         try:
             task.func(*task.args, **task.kwargs)
         except Exception as e:
@@ -175,9 +175,11 @@ def forward_to_tg(data):
         medias = [InputMediaPhoto(url) for url in image_urls]
         msg = f"{msg_prefix} {text}"
         medias[0].caption = msg  # 插入消息内容
+        logger.info(f"Invoking tg api, sending to {forward.tg}, media is: {medias}")
         tg_message = telegram_bot.send_media_group(
             forward.tg, medias, reply_to_message_id=reply_to_message_id
         )
+        logger.info(f"tg api returned: {tg_message}")
         message.message_id_tg = tg_message[0].id
         message.save()
         return
@@ -189,6 +191,7 @@ def forward_to_tg(data):
     tg_message = telegram_bot.send_message(
         forward.tg, msg, reply_to_message_id=reply_to_message_id
     )
+    logger.info(f"tg api returned: {tg_message}")
     message.message_id_tg = tg_message.id
     message.save()
 
