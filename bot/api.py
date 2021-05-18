@@ -36,7 +36,7 @@ def worker():
         if q.qsize() > 0:
             logger.warning(f"The queue has approximate remaining {q.qsize()} task(s).")
 
-        retry = 0
+        retry = 1
         while retry:
             try:
                 task.func(*task.args, **task.kwargs)
@@ -44,7 +44,6 @@ def worker():
             except ApiTelegramException as e:
                 if e.error_code == 429:
                     time.sleep(1)
-                    retry = 1
                 else:
                     raise e
             except Exception as e:
