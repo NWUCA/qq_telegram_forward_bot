@@ -6,6 +6,7 @@ import html
 import json
 import logging
 import re
+import time
 from collections import namedtuple
 from queue import Queue
 from threading import Thread
@@ -15,6 +16,7 @@ import requests
 import telebot
 from django.conf import settings
 from telebot import types
+from telebot.apihelper import ApiTelegramException
 from telebot.types import InputMediaPhoto
 
 from .models import GroupCard, Message, User
@@ -28,17 +30,28 @@ q: Any = Queue()
 
 
 def worker():
+    logger.warning(f"RETRY_ON_ERROR: {telebot.apihelper.RETRY_ON_ERROR}")
     while True:
         task: Task = q.get()
         if q.qsize() > 0:
             logger.warning(f"The queue has approximate remaining {q.qsize()} task(s).")
-        try:
-            task.func(*task.args, **task.kwargs)
-        except Exception as e:
-            import traceback
 
-            traceback.print_exc()
-            logger.critical(e)
+        retry = 0
+        while retry:
+            try:
+                task.func(*task.args, **task.kwargs)
+                retry = 0
+            except ApiTelegramException as e:
+                if e.error_code == 429:
+                    time.sleep(1)
+                    retry = 1
+                else:
+                    raise e
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                logger.critical(e)
+                retry = 0
 
 
 t = Thread(target=worker)
@@ -92,10 +105,10 @@ def process_qq_reply(message: str):
     message_id = match[1]
     text = re.sub(reply_re, lambda a: "", message)
     try:
-        message = Message.objects.get(message_id_qq=message_id)
+        rtn_message = Message.objects.get(message_id_qq=message_id)
     except Message.DoesNotExist:
-        message = None
-    return message, text
+        rtn_message = None
+    return rtn_message, text
 
 
 def process_at(message: str, forward):
@@ -177,7 +190,7 @@ def forward_to_tg(data):
         medias[0].caption = msg  # 插入消息内容
         logger.info(f"Invoking tg api, sending to {forward.tg}, media is: {medias}")
         tg_message = telegram_bot.send_media_group(
-            forward.tg, medias, reply_to_message_id=reply_to_message_id
+            forward.tg, medias, reply_to_message_id=reply_to_message_id, timeout=2
         )
         logger.info(f"tg api returned: {tg_message}")
         message.message_id_tg = tg_message[0].id
@@ -189,7 +202,7 @@ def forward_to_tg(data):
     msg = f"{msg_prefix} {data['message']}"
     logger.info(f"Invoking tg api, sending to {forward.tg}, msg is: {msg}")
     tg_message = telegram_bot.send_message(
-        forward.tg, msg, reply_to_message_id=reply_to_message_id
+        forward.tg, msg, reply_to_message_id=reply_to_message_id, timeout=2
     )
     logger.info(f"tg api returned: {tg_message}")
     message.message_id_tg = tg_message.id
