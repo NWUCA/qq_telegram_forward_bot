@@ -22,6 +22,9 @@ from telebot.types import InputMediaPhoto
 from .models import GroupCard, Message, User
 from .utils import find_forward
 
+telebot.apihelper.RETRY_ON_ERROR = True
+telebot.apihelper.READ_TIMEOUT = 5
+
 logger = logging.getLogger(__name__)
 
 telegram_bot = telebot.TeleBot(settings.TELEGRAM_API_TOKEN)
@@ -44,6 +47,7 @@ def worker():
             except ApiTelegramException as e:
                 if e.error_code == 429:
                     time.sleep(1)
+                    logger.warning(f"hit tg api rate limit, retrying after 1 sec. err is {e}")
                 else:
                     raise e
             except Exception as e:
@@ -203,7 +207,7 @@ def forward_to_tg(data):
     tg_message = telegram_bot.send_message(
         forward.tg, msg, reply_to_message_id=reply_to_message_id, timeout=2
     )
-    logger.info(f"tg api returned: {tg_message}")
+    logger.info(f"tg api returned. The content is omitted.")
     message.message_id_tg = tg_message.id
     message.save()
 

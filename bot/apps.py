@@ -11,8 +11,6 @@ class BotConfig(AppConfig):
     name = 'bot'
 
     def ready(self):
-        telebot.apihelper.RETRY_ON_ERROR = True
-
         # 注册 Telegram bot 的 webhook
         bot = telebot.TeleBot(settings.TELEGRAM_API_TOKEN)
         bot.remove_webhook()
